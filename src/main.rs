@@ -10,8 +10,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
-use pleco::{Board, BitMove, Player, Piece as PlecoPrec, Rank, File, SQ as Square, MoveList, PieceType};
-use pleco::core::{file_idx_of_sq, file_of_sq, rank_idx_of_sq, rank_of_sq};
+use pleco::{Board, Player, Piece as PlecoPrec, Rank, File, SQ as Square, MoveList, PieceType};
 use rand::prelude::*;
 
 
@@ -36,7 +35,7 @@ impl App {
         let moves: MoveList = self.board.generate_moves();
         if !moves.is_empty() {
             let mut rng = thread_rng();
-            let chosen_move = moves[rng.gen_range(0, moves.len())];
+            let chosen_move = moves[rng.gen_range(0..moves.len())];
             self.board.apply_move(chosen_move);
             self.message = format!("AI moved: {}", chosen_move);
         } else {
@@ -133,7 +132,7 @@ impl App {
 fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut App) -> io::Result<()> {
     loop {
         terminal.draw(|f| {
-            let area = f.size();
+            let area = f.area();
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([
