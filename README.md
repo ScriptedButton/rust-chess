@@ -21,8 +21,8 @@ A terminal-based chess game written in Rust using [Pleco](https://github.com/ple
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/rust-tui-chess
-cd rust-tui-chess
+git clone https://github.com/ScriptedButton/rust-chess
+cd rust-chess
 ```
 
 2. Build and run:
@@ -95,4 +95,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you have any questions, feel free to reach out by:
 - Opening an issue
 - Submitting a pull request
-- Emailing at [your.email@example.com]
+- Emailing at [macoryx@gmail.com]
