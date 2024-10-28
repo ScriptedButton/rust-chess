@@ -10,9 +10,10 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
     Terminal,
 };
-use pleco::{Board, Player, Piece as PlecoPrec, Rank, File, SQ as Square, MoveList, PieceType};
+use pleco::{Board, Player, Piece as PlecoPrec, Rank, File, SQ as Square, MoveList, Piece};
 use rand::prelude::*;
-
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
 
 struct App {
     board: Board,
@@ -98,22 +99,51 @@ impl App {
         }
     }
 
-    fn get_piece_char(piece: PlecoPrec) -> char {
-        match (piece.type_of(), piece.player_lossy()) {
-            (PieceType::P, Player::White) => '♙',
-            (PieceType::R, Player::White) => '♖',
-            (PieceType::N, Player::White) => '♘',
-            (PieceType::B, Player::White) => '♗',
-            (PieceType::Q, Player::White) => '♕',
-            (PieceType::K, Player::White) => '♔',
-            (PieceType::P, Player::Black) => '♟',
-            (PieceType::R, Player::Black) => '♜',
-            (PieceType::N, Player::Black) => '♞',
-            (PieceType::B, Player::Black) => '♝',
-            (PieceType::Q, Player::Black) => '♛',
-            (PieceType::K, Player::Black) => '♚',
-            _ => '.'
+    fn get_piece_char(piece: Piece) -> char {
+        match piece {
+            Piece::WhitePawn => '♙',
+            Piece::WhiteRook => '♖',
+            Piece::WhiteKnight => '♘',
+            Piece::WhiteBishop => '♗',
+            Piece::WhiteQueen => '♕',
+            Piece::WhiteKing => '♔',
+            Piece::BlackPawn => '♟',
+            Piece::BlackRook => '♜',
+            Piece::BlackKnight => '♞',
+            Piece::BlackBishop => '♝',
+            Piece::BlackQueen => '♛',
+            Piece::BlackKing => '♚',
+            _ => ' '
         }
+    }
+
+
+    fn get_piece_style(piece: Piece, is_dark_square: bool, is_selected: bool, is_cursor: bool) -> Style {
+        let mut style = Style::default();
+
+        // Set background color based on square color and selection
+        if is_selected {
+            style = style.bg(Color::Yellow);
+        } else if is_cursor {
+            style = style.bg(Color::Rgb(150, 150, 150));
+        } else if is_dark_square {
+            style = style.bg(Color::Rgb(86, 86, 86));
+        } else {
+            style = style.bg(Color::Rgb(200, 200, 200));
+        }
+
+        // Set foreground color based on piece color
+        match piece.player() {
+            Some(Player::White) => style = style.fg(Color::White),
+            Some(Player::Black) => style = style.fg(Color::Black),
+            None => {}
+        }
+
+        if is_selected || is_cursor {
+            style = style.add_modifier(Modifier::BOLD);
+        }
+
+        style
     }
 
     fn get_game_status(&self) -> String {
@@ -141,43 +171,59 @@ fn run_app<B: ratatui::backend::Backend>(terminal: &mut Terminal<B>, app: &mut A
                 ].as_ref())
                 .split(area);
 
-            let mut board_str = String::new();
-            board_str.push_str("   A  B  C  D  E  F  G  H \n");
+            // Create header row with column labels
+            let header = Line::from(vec![
+                Span::styled("   ", Style::default()),
+                Span::styled("A ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("B ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("C ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("D ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("E ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("F ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("G ", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled("H ", Style::default().add_modifier(Modifier::BOLD)),
+            ]);
 
+            let mut board_spans = vec![header];
 
             for rank in (0..8).rev() {
-                board_str.push_str(&format!("{} ", rank + 1));
+                let mut row_spans = vec![
+                    Span::styled(
+                        format!("{} ", rank + 1),
+                        Style::default().add_modifier(Modifier::BOLD)
+                    )
+                ];
+
                 for file in 0..8 {
                     let sq = Square(rank * 8 + file);
-
                     let is_selected = app.selected_pos.map_or(false, |sel| sel == sq);
                     let is_cursor = app.cursor_pos == sq;
-
-                    if is_cursor {
-                        board_str.push('[');
-                    } else {
-                        board_str.push(' ');
-                    }
+                    let is_dark_square = (rank + file) % 2 == 1;
 
                     let piece = app.board.piece_at_sq(sq);
-                    board_str.push(App::get_piece_char(piece));
+                    let piece_char = App::get_piece_char(piece);
+                    let style = App::get_piece_style(piece, is_dark_square, is_selected, is_cursor);
 
-                    if is_cursor {
-                        board_str.push(']');
-                    } else {
-                        board_str.push(' ');
-                    }
+                    row_spans.push(Span::styled(format!(" {} ", piece_char), style));
                 }
-                board_str.push('\n');
+
+                board_spans.push(Line::from(row_spans));
             }
 
             let status = app.get_game_status();
-            let board_widget = Paragraph::new(board_str)
+            let board_widget = Paragraph::new(board_spans)
                 .block(Block::default()
                     .title(status)
                     .borders(Borders::ALL));
 
+            let status_style = if app.message.contains("Invalid") {
+                Style::default().fg(Color::Red)
+            } else {
+                Style::default().fg(Color::Green)
+            };
+
             let status_widget = Paragraph::new(app.message.clone())
+                .style(status_style)
                 .block(Block::default().title("Status").borders(Borders::ALL));
 
             f.render_widget(board_widget, chunks[0]);
